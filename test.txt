@@ -1,0 +1,46 @@
+
+시스템 로그를 분석하는 웹 어드민 페이지를 만들어보려고 해.
+readme.md 파일을 만들어줘. 아래 내용만 만들어줘
+  - 프로젝트 개요                                                                                                                                                                                                                                               
+  - 기술 스택         
+    - 버전                                                                                                                                                                                                                                                       - 디렉토리 구조                                                                                                                                                                                                                                                 
+  - 포팅 매뉴얼      
+
+/init @README.md 파일 확인하여 프로젝트 초기 구성해줘     
+  - CLOADE.md 파일을 한글로 작성                 
+  - 디렉토리 구조만 생성     
+
+
+Claude Code  에서 활용할 수 있는  setting.json 예시를 전달해줘.
+* 웹개발에 활용 
+* permission 만 제안
+
+
+
+/init 방화벽 로그 모니터링 웹 어드민 페이지를 만들어보려고 해. 
+- FE : next.js + tailwind css + Javascript
+- BE : Python fast api
+- DB : Sqlite
+
+위의 내용으로 CLAUDE.md 파일을 만들고 디렉토리만 초기화해줘. 코드는 아직 쓰지마. 
+
+# 유의사항
+- CLAUDE.md 파일은 한글로 작성
+
+
+
+
+
+/init 방화벽 로그 모니터링 웹 어드민 페이지를 만들어보려고 해. 
+- FE : next.js + tailwind css + Javascript
+- BE : Python fast api
+- DB : Sqlite
+
+위의 내용으로 CLAUDE.md 파일을 만들고 디렉토리만 초기화해줘. 코드는 아직 쓰지마. 
+
+# 유의사항
+- CLAUDE.md 파일은 한글로 작성
+
+
+
+
