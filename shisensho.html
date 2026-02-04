@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 사천성 - 레이어 타일 매칭 🀄</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            text-align: center;
+            max-width: 1200px;
+        }
+
+        h1 {
+            color: #ecf0f1;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .game-board {
+            background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+            border: 5px solid #34495e;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            margin: 0 auto;
+            position: relative;
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: rgba(52,73,94,0.8);
+            color: #ecf0f1;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            min-width: 150px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.3rem;
+        }
+
+        .info-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(52,152,219,0.4);
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(52,152,219,0.6);
+        }
+
+        .btn.hint {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .btn.shuffle {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        #levelScreen, #winScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            padding: 3rem 4rem;
+            border-radius: 30px;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            transition: transform 0.3s;
+            border: 3px solid #3498db;
+        }
+
+        #levelScreen.show, #winScreen.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #levelScreen h2, #winScreen h2 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+
+        .level-info {
+            font-size: 1.5rem;
+            margin: 1rem 0;
+            line-height: 1.8;
+        }
+
+        .timer {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .layer-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(52,73,94,0.9);
+            padding: 1rem;
+            border-radius: 10px;
+            color: #ecf0f1;
+            min-width: 150px;
+        }
+
+        .layer-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+            padding: 0.3rem 0.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+
+        .layer-item.active {
+            background: rgba(52,152,219,0.5);
+            font-weight: bold;
+        }
+
+        .combo-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            font-weight: bold;
+            color: #f39c12;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            pointer-events: none;
+            opacity: 0;
+            animation: comboAnim 1s;
+        }
+
+        @keyframes comboAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🀄 3D 사천성 퍼즐 🀄</h1>
+
+        <div class="game-board">
+            <div class="layer-indicator" id="layerIndicator"></div>
+            <canvas id="gameCanvas" width="900" height="600"></canvas>
+        </div>
+
+        <div class="game-info">
+            <div class="info-box">
+                <div class="info-label">레벨</div>
+                <div class="info-value" id="level">1</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">점수</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">남은 타일</div>
+                <div class="info-value" id="tilesLeft">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label timer">시간</div>
+                <div class="info-value timer" id="timer">0</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="newGameBtn">새 게임</button>
+            <button class="btn hint" id="hintBtn">힌트 (3)</button>
+            <button class="btn shuffle" id="shuffleBtn">섞기 (2)</button>
+        </div>
+    </div>
+
+    <div id="levelScreen">
+        <h2>레벨 <span id="currentLevel">1</span></h2>
+        <div class="level-info">
+            <p>레이어: <span id="levelLayers">3</span>층</p>
+            <p>타일 종류: <span id="levelTypes">6</span>개</p>
+            <p>보드 크기: <span id="levelSize">8x8</span></p>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="levelProgress" style="width: 0%">0%</div>
+        </div>
+        <button class="btn" id="startLevelBtn">시작!</button>
+    </div>
+
+    <div id="winScreen">
+        <h2>🎉 클리어! 🎉</h2>
+        <div class="level-info">
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>걸린 시간: <span id="finalTime">0</span>초</p>
+            <p>보너스: <span id="bonusScore">0</span></p>
+        </div>
+        <button class="btn" id="nextLevelBtn">다음 레벨</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let level = 1;
+        let score = 0;
+        let gameRunning = false;
+        let timer = 0;
+        let timerInterval = null;
+        let hintsLeft = 3;
+        let shufflesLeft = 2;
+        let comboCount = 0;
+
+        // Tile symbols by category
+        const tileSymbols = [
+            // Animals
+            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+            // Fruits
+            '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍑',
+            // Food
+            '🍕', '🍔', '🍟', '🌭', '🍿', '🧁', '🍩', '🍪',
+            // Sports
+            '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏓', '🏸',
+            // Nature
+            '🌸', '🌺', '🌻', '🌷', '🌹', '🏵️', '🌼', '💐',
+            // Objects
+            '⭐', '💎', '🎁', '🎈', '🎀', '🎪', '🎨', '🎭'
+        ];
+
+        // Board configuration
+        let board = [];
+        let selectedTile = null;
+        let matchPath = [];
+        let isCrossLayer = false;
+
+        // Level configuration
+        function getLevelConfig() {
+            return {
+                layers: Math.min(3 + Math.floor(level / 3), 6),
+                cols: Math.min(6 + Math.floor(level / 2), 12),
+                rows: Math.min(6 + Math.floor(level / 2), 10),
+                tileTypes: Math.min(6 + Math.floor(level / 2), 24)
+            };
+        }
+
+        // Create board
+        function createBoard() {
+            const config = getLevelConfig();
+            board = [];
+
+            // First, determine all positions where tiles will be placed
+            let positions = [];
+            for (let layer = 0; layer < config.layers; layer++) {
+                for (let row = 0; row < config.rows; row++) {
+                    for (let col = 0; col < config.cols; col++) {
+                        // Skip some positions on upper layers to create interesting patterns
+                        if (layer > 0 && Math.random() < 0.25) continue;
+
+                        positions.push({ col, row, layer });
+                    }
+                }
+            }
+
+            // Ensure even number of positions (for pairs)
+            if (positions.length % 2 !== 0) {
+                positions.pop();
+            }
+
+            const totalTiles = positions.length;
+            const pairsNeeded = totalTiles / 2;
+
+            // Generate tile pairs - exactly the number we need
+            let tiles = [];
+            let typeIndex = 0;
+            for (let i = 0; i < pairsNeeded; i++) {
+                // Add a pair of tiles
+                tiles.push({
+                    symbol: tileSymbols[typeIndex],
+                    type: typeIndex
+                });
+                tiles.push({
+                    symbol: tileSymbols[typeIndex],
+                    type: typeIndex
+                });
+
+                // Move to next symbol, wrap around if needed
+                typeIndex = (typeIndex + 1) % Math.min(config.tileTypes, tileSymbols.length);
+            }
+
+            // Shuffle tiles
+            tiles = tiles.sort(() => Math.random() - 0.5);
+
+            // Place tiles on board at predetermined positions
+            for (let i = 0; i < positions.length; i++) {
+                board.push({
+                    ...tiles[i],
+                    col: positions[i].col,
+                    row: positions[i].row,
+                    layer: positions[i].layer,
+                    matched: false,
+                    blocked: false
+                });
+            }
+
+            updateBlockedStatus();
+            updateTileCount();
+        }
+
+        // Check if tile is blocked by tiles above
+        function updateBlockedStatus() {
+            board.forEach(tile => {
+                tile.blocked = false;
+                if (!tile.matched) {
+                    // Check if any tile above is blocking this one
+                    const tilesAbove = board.filter(t =>
+                        !t.matched &&
+                        t.layer > tile.layer &&
+                        Math.abs(t.col - tile.col) <= 0.5 &&
+                        Math.abs(t.row - tile.row) <= 0.5
+                    );
+                    tile.blocked = tilesAbove.length > 0;
+                }
+            });
+        }
+
+        // Get tile dimensions
+        function getTileSize() {
+            const config = getLevelConfig();
+            const padding = 50;
+            const layerOffset = 10;
+            const availableWidth = canvas.width - padding * 2;
+            const availableHeight = canvas.height - padding * 2 - config.layers * layerOffset;
+
+            const tileWidth = Math.floor(availableWidth / config.cols);
+            const tileHeight = Math.floor(availableHeight / config.rows);
+            const tileSize = Math.min(tileWidth, tileHeight, 70);
+
+            return tileSize;
+        }
+
+        // Get tile screen position
+        function getTilePosition(tile) {
+            const config = getLevelConfig();
+            const tileSize = getTileSize();
+            const layerOffset = 10;
+            const padding = 50;
+
+            const boardWidth = config.cols * tileSize;
+            const boardHeight = config.rows * tileSize;
+            const startX = (canvas.width - boardWidth) / 2;
+            const startY = (canvas.height - boardHeight) / 2;
+
+            return {
+                x: startX + tile.col * tileSize - tile.layer * layerOffset,
+                y: startY + tile.row * tileSize - tile.layer * layerOffset,
+                width: tileSize,
+                height: tileSize
+            };
+        }
+
+        // Draw tile
+        function drawTile(tile, highlight = false, selected = false) {
+            if (tile.matched) return;
+
+            const pos = getTilePosition(tile);
+            const isSelectable = isTileOnEdge(tile);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(pos.x + 5, pos.y + 5, pos.width, pos.height);
+
+            // Tile background
+            if (selected) {
+                ctx.fillStyle = '#3498db';
+            } else if (highlight) {
+                ctx.fillStyle = '#f39c12';
+            } else if (!isSelectable) {
+                // 선택 불가능한 타일은 어둡게
+                const layerColor = 150 - tile.layer * 20;
+                ctx.fillStyle = `rgb(${layerColor}, ${layerColor}, ${layerColor})`;
+            } else {
+                // 선택 가능한 타일은 밝게
+                const layerColor = 220 - tile.layer * 20;
+                ctx.fillStyle = `rgb(${layerColor}, ${layerColor}, ${layerColor})`;
+            }
+            ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+
+            // Border (선택 가능한 타일은 초록색 테두리)
+            if (isSelectable && !selected) {
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = 4;
+            } else {
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 3;
+            }
+            ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+
+            // 3D effect
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillRect(pos.x, pos.y, pos.width, 5);
+            ctx.fillRect(pos.x, pos.y, 5, pos.height);
+
+            // Symbol
+            ctx.globalAlpha = isSelectable ? 1 : 0.4;
+            ctx.font = `${pos.height * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#000';
+            ctx.fillText(tile.symbol, pos.x + pos.width / 2, pos.y + pos.height / 2);
+            ctx.globalAlpha = 1;
+
+            // Layer indicator
+            ctx.fillStyle = '#3498db';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(`L${tile.layer + 1}`, pos.x + 10, pos.y + 15);
+        }
+
+        // Draw match path
+        function drawPath(path, crossLayer = false) {
+            if (path.length < 2) return;
+
+            // 다른 층 연결은 특별한 색상으로 표시
+            if (crossLayer) {
+                ctx.strokeStyle = '#e74c3c';
+                ctx.lineWidth = 5;
+                ctx.setLineDash([15, 8]);
+            } else {
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]);
+            }
+
+            ctx.beginPath();
+
+            path.forEach((point, index) => {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 다른 층 연결시 추가 효과
+            if (crossLayer) {
+                ctx.strokeStyle = '#f39c12';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // Check if tile is on the edge (can be selected)
+        function isTileOnEdge(tile) {
+            // 위에 타일이 있으면 선택 불가
+            if (tile.blocked) return false;
+
+            // 같은 레이어에서 최소한 한 방향이 열려있어야 함
+            const sameLevelTiles = board.filter(t =>
+                !t.matched &&
+                t !== tile &&
+                t.layer === tile.layer
+            );
+
+            // 상하좌우 확인
+            const hasLeft = sameLevelTiles.some(t =>
+                t.col === tile.col - 1 && t.row === tile.row
+            );
+            const hasRight = sameLevelTiles.some(t =>
+                t.col === tile.col + 1 && t.row === tile.row
+            );
+            const hasTop = sameLevelTiles.some(t =>
+                t.col === tile.col && t.row === tile.row - 1
+            );
+            const hasBottom = sameLevelTiles.some(t =>
+                t.col === tile.col && t.row === tile.row + 1
+            );
+
+            // 최소한 한쪽이 열려있으면 선택 가능
+            return !hasLeft || !hasRight || !hasTop || !hasBottom;
+        }
+
+        // Find path between two tiles (Shisen-Sho rules)
+        function findPath(tile1, tile2) {
+            if (tile1.type !== tile2.type) return null;
+            // 다른 층의 타일도 매칭 가능!
+            if (tile1.blocked || tile2.blocked) return null;
+
+            // 바깥쪽 타일만 선택 가능
+            if (!isTileOnEdge(tile1) || !isTileOnEdge(tile2)) return null;
+
+            const pos1 = getTilePosition(tile1);
+            const pos2 = getTilePosition(tile2);
+
+            const start = {
+                x: pos1.x + pos1.width / 2,
+                y: pos1.y + pos1.height / 2,
+                col: tile1.col,
+                row: tile1.row
+            };
+
+            const end = {
+                x: pos2.x + pos2.width / 2,
+                y: pos2.y + pos2.height / 2,
+                col: tile2.col,
+                row: tile2.row
+            };
+
+            // Try direct line
+            if (canConnect(start, end, tile1, tile2, 0)) {
+                return [start, end];
+            }
+
+            // Try one corner
+            const corners1 = [
+                { x: start.x, y: end.y, col: start.col, row: end.row },
+                { x: end.x, y: start.y, col: end.col, row: start.row }
+            ];
+
+            for (let corner of corners1) {
+                if (canConnect(start, corner, tile1, tile2, 1) &&
+                    canConnect(corner, end, tile1, tile2, 1)) {
+                    return [start, corner, end];
+                }
+            }
+
+            // Try two corners (extended line)
+            const config = getLevelConfig();
+            const tileSize = getTileSize();
+            const boardWidth = config.cols * tileSize;
+            const boardHeight = config.rows * tileSize;
+            const startX = (canvas.width - boardWidth) / 2;
+            const startY = (canvas.height - boardHeight) / 2;
+
+            // Try extending in 4 directions
+            for (let extCol = -1; extCol <= config.cols; extCol++) {
+                const corner1 = {
+                    x: startX + extCol * tileSize + tileSize / 2,
+                    y: start.y,
+                    col: extCol,
+                    row: start.row
+                };
+                const corner2 = {
+                    x: startX + extCol * tileSize + tileSize / 2,
+                    y: end.y,
+                    col: extCol,
+                    row: end.row
+                };
+
+                if (canConnect(start, corner1, tile1, tile2, 2) &&
+                    canConnect(corner1, corner2, tile1, tile2, 2) &&
+                    canConnect(corner2, end, tile1, tile2, 2)) {
+                    return [start, corner1, corner2, end];
+                }
+            }
+
+            for (let extRow = -1; extRow <= config.rows; extRow++) {
+                const corner1 = {
+                    x: start.x,
+                    y: startY + extRow * tileSize + tileSize / 2,
+                    col: start.col,
+                    row: extRow
+                };
+                const corner2 = {
+                    x: end.x,
+                    y: startY + extRow * tileSize + tileSize / 2,
+                    col: end.col,
+                    row: extRow
+                };
+
+                if (canConnect(start, corner1, tile1, tile2, 2) &&
+                    canConnect(corner1, corner2, tile1, tile2, 2) &&
+                    canConnect(corner2, end, tile1, tile2, 2)) {
+                    return [start, corner1, corner2, end];
+                }
+            }
+
+            return null;
+        }
+
+        // Check if two points can connect without crossing tiles
+        function canConnect(p1, p2, tile1, tile2, maxTurns) {
+            const config = getLevelConfig();
+
+            // Check if path crosses any tiles (check relevant layers)
+            // For cross-layer matches, check both layers
+            const layersToCheck = new Set([tile1.layer, tile2.layer]);
+
+            const tiles = board.filter(t =>
+                !t.matched &&
+                t !== tile1 &&
+                t !== tile2 &&
+                layersToCheck.has(t.layer)
+            );
+
+            for (let tile of tiles) {
+                const pos = getTilePosition(tile);
+                const tileCenter = {
+                    x: pos.x + pos.width / 2,
+                    y: pos.y + pos.height / 2
+                };
+
+                // Check if path crosses this tile
+                if (p1.x === p2.x) {
+                    // Vertical line
+                    const minY = Math.min(p1.y, p2.y);
+                    const maxY = Math.max(p1.y, p2.y);
+                    if (Math.abs(tileCenter.x - p1.x) < pos.width / 2 &&
+                        tileCenter.y > minY && tileCenter.y < maxY) {
+                        return false;
+                    }
+                } else if (p1.y === p2.y) {
+                    // Horizontal line
+                    const minX = Math.min(p1.x, p2.x);
+                    const maxX = Math.max(p1.x, p2.x);
+                    if (Math.abs(tileCenter.y - p1.y) < pos.height / 2 &&
+                        tileCenter.x > minX && tileCenter.x < maxX) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        // Handle click
+        canvas.addEventListener('click', (e) => {
+            if (!gameRunning) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Find clicked tile (check from top layer down)
+            const sortedTiles = [...board]
+                .filter(t => !t.matched && !t.blocked)
+                .sort((a, b) => b.layer - a.layer);
+
+            for (let tile of sortedTiles) {
+                const pos = getTilePosition(tile);
+                if (x >= pos.x && x <= pos.x + pos.width &&
+                    y >= pos.y && y <= pos.y + pos.height) {
+
+                    // 바깥쪽 타일만 선택 가능
+                    if (!isTileOnEdge(tile)) {
+                        break; // 선택 불가능한 타일 클릭시 무시
+                    }
+
+                    if (selectedTile === null) {
+                        selectedTile = tile;
+                    } else if (selectedTile === tile) {
+                        selectedTile = null;
+                    } else {
+                        const path = findPath(selectedTile, tile);
+                        if (path) {
+                            matchPath = path;
+                            isCrossLayer = selectedTile.layer !== tile.layer;
+                            setTimeout(() => {
+                                matchTiles(selectedTile, tile);
+                                selectedTile = null;
+                                matchPath = [];
+                                isCrossLayer = false;
+                            }, 300);
+                        } else {
+                            selectedTile = tile;
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+
+        // Match tiles
+        function matchTiles(tile1, tile2) {
+            tile1.matched = true;
+            tile2.matched = true;
+
+            comboCount++;
+            const points = 10 * comboCount;
+            score += points;
+            document.getElementById('score').textContent = score;
+
+            // Show combo
+            if (comboCount > 1) {
+                showCombo(comboCount);
+            }
+
+            updateBlockedStatus();
+            updateTileCount();
+            updateLayerIndicator();
+
+            // Check win
+            const remainingTiles = board.filter(t => !t.matched).length;
+            if (remainingTiles === 0) {
+                winLevel();
+            }
+        }
+
+        // Show combo animation
+        function showCombo(combo) {
+            const comboDiv = document.createElement('div');
+            comboDiv.className = 'combo-display';
+            comboDiv.textContent = `COMBO x${combo}!`;
+            document.body.appendChild(comboDiv);
+
+            setTimeout(() => {
+                comboDiv.remove();
+            }, 1000);
+        }
+
+        // Hint
+        document.getElementById('hintBtn').addEventListener('click', () => {
+            if (hintsLeft <= 0 || !gameRunning) return;
+
+            hintsLeft--;
+            document.getElementById('hintBtn').textContent = `힌트 (${hintsLeft})`;
+
+            // Find first available match
+            const availableTiles = board.filter(t => !t.matched && !t.blocked);
+
+            for (let i = 0; i < availableTiles.length; i++) {
+                for (let j = i + 1; j < availableTiles.length; j++) {
+                    const path = findPath(availableTiles[i], availableTiles[j]);
+                    if (path) {
+                        selectedTile = availableTiles[i];
+                        matchPath = path;
+                        isCrossLayer = availableTiles[i].layer !== availableTiles[j].layer;
+                        setTimeout(() => {
+                            selectedTile = null;
+                            matchPath = [];
+                            isCrossLayer = false;
+                        }, 2000);
+                        return;
+                    }
+                }
+            }
+        });
+
+        // Shuffle
+        document.getElementById('shuffleBtn').addEventListener('click', () => {
+            if (shufflesLeft <= 0 || !gameRunning) return;
+
+            shufflesLeft--;
+            document.getElementById('shuffleBtn').textContent = `섞기 (${shufflesLeft})`;
+
+            // Get unmatched tiles
+            const unmatchedTiles = board.filter(t => !t.matched);
+            const symbols = unmatchedTiles.map(t => ({ symbol: t.symbol, type: t.type }));
+
+            // Shuffle symbols
+            for (let i = symbols.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [symbols[i], symbols[j]] = [symbols[j], symbols[i]];
+            }
+
+            // Assign new symbols
+            unmatchedTiles.forEach((tile, index) => {
+                tile.symbol = symbols[index].symbol;
+                tile.type = symbols[index].type;
+            });
+
+            selectedTile = null;
+            comboCount = 0;
+        });
+
+        // Update tile count
+        function updateTileCount() {
+            const remaining = board.filter(t => !t.matched).length;
+            document.getElementById('tilesLeft').textContent = remaining;
+        }
+
+        // Update layer indicator
+        function updateLayerIndicator() {
+            const config = getLevelConfig();
+            const layerCounts = {};
+
+            for (let i = 0; i < config.layers; i++) {
+                layerCounts[i] = 0;
+            }
+
+            board.forEach(tile => {
+                if (!tile.matched) {
+                    layerCounts[tile.layer]++;
+                }
+            });
+
+            let html = '<div style="font-weight: bold; margin-bottom: 0.5rem;">레이어</div>';
+            for (let i = config.layers - 1; i >= 0; i--) {
+                const isActive = board.some(t => !t.matched && !t.blocked && t.layer === i);
+                html += `<div class="layer-item ${isActive ? 'active' : ''}">
+                    <span>L${i + 1}</span>
+                    <span>${layerCounts[i]} 타일</span>
+                </div>`;
+            }
+
+            document.getElementById('layerIndicator').innerHTML = html;
+        }
+
+        // Start level
+        function startLevel() {
+            createBoard();
+            gameRunning = true;
+            timer = 0;
+            comboCount = 0;
+            hintsLeft = 3;
+            shufflesLeft = 2;
+
+            document.getElementById('hintBtn').textContent = `힌트 (${hintsLeft})`;
+            document.getElementById('shuffleBtn').textContent = `섞기 (${shufflesLeft})`;
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timer++;
+                document.getElementById('timer').textContent = timer;
+            }, 1000);
+
+            updateLayerIndicator();
+        }
+
+        // Win level
+        function winLevel() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+
+            const timeBonus = Math.max(0, 300 - timer) * 10;
+            const comboBonus = comboCount * 50;
+            const totalBonus = timeBonus + comboBonus;
+
+            score += totalBonus;
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalTime').textContent = timer;
+            document.getElementById('bonusScore').textContent = totalBonus;
+            document.getElementById('winScreen').classList.add('show');
+        }
+
+        // Show level screen
+        function showLevelScreen() {
+            const config = getLevelConfig();
+            document.getElementById('currentLevel').textContent = level;
+            document.getElementById('levelLayers').textContent = config.layers;
+            document.getElementById('levelTypes').textContent = config.tileTypes;
+            document.getElementById('levelSize').textContent = `${config.cols}x${config.rows}`;
+
+            const progress = Math.min((level - 1) / 20 * 100, 100);
+            document.getElementById('levelProgress').style.width = progress + '%';
+            document.getElementById('levelProgress').textContent = Math.floor(progress) + '%';
+
+            document.getElementById('levelScreen').classList.add('show');
+        }
+
+        // Button events
+        document.getElementById('startLevelBtn').addEventListener('click', () => {
+            document.getElementById('levelScreen').classList.remove('show');
+            startLevel();
+        });
+
+        document.getElementById('nextLevelBtn').addEventListener('click', () => {
+            level++;
+            document.getElementById('level').textContent = level;
+            document.getElementById('winScreen').classList.remove('show');
+            showLevelScreen();
+        });
+
+        document.getElementById('newGameBtn').addEventListener('click', () => {
+            level = 1;
+            score = 0;
+            document.getElementById('level').textContent = level;
+            document.getElementById('score').textContent = score;
+            showLevelScreen();
+        });
+
+        // Draw loop
+        function draw() {
+            ctx.fillStyle = '#1a252f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw tiles (from bottom layer to top)
+            const sortedTiles = [...board].sort((a, b) => a.layer - b.layer);
+
+            sortedTiles.forEach(tile => {
+                const highlight = selectedTile && tile !== selectedTile &&
+                                tile.type === selectedTile.type && !tile.blocked &&
+                                !tile.matched && isTileOnEdge(tile);
+                const selected = tile === selectedTile;
+                drawTile(tile, highlight, selected);
+            });
+
+            // Draw path
+            if (matchPath.length > 0) {
+                drawPath(matchPath, isCrossLayer);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Start game
+        showLevelScreen();
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 건물 구조 뷰어 🏢</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #fff;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-btn {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .view-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .view-btn.active {
+            background: #3498db;
+            border-color: #2980b9;
+        }
+
+        #canvas {
+            flex: 1;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            cursor: grab;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .building-option {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .building-option:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+
+        .building-option.active {
+            background: rgba(52,152,219,0.5);
+            border-color: #3498db;
+        }
+
+        .floor-list {
+            margin: 10px 0;
+        }
+
+        .floor-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .floor-item:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .floor-item.hidden {
+            opacity: 0.4;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: #c0392b;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #27ae60;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 19px;
+            height: 19px;
+            border-radius: 50%;
+            background: white;
+            top: 3px;
+            left: 3px;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 28px;
+        }
+
+        .slider-group {
+            margin: 15px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: none;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .info-display {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .color-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid white;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            background: #3498db;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .coordinates {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-view">
+            <div class="header">
+                <h1>🏢 3D 건물 구조 뷰어</h1>
+                <div class="view-controls">
+                    <button class="view-btn active" data-mode="perspective">투시도</button>
+                    <button class="view-btn" data-mode="wireframe">와이어프레임</button>
+                    <button class="view-btn" data-mode="xray">X-Ray</button>
+                    <button class="view-btn" data-mode="section">단면도</button>
+                </div>
+            </div>
+            <canvas id="canvas"></canvas>
+            <div class="coordinates">
+                <div>카메라: <span id="cameraPos">X:0 Y:0 Z:0</span></div>
+                <div>회전: <span id="rotation">RX:0° RY:0°</span></div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-title">🏗️ 건물 선택</div>
+                <div class="building-option active" data-building="office">
+                    <strong>오피스 빌딩</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">10층, 사무실</div>
+                </div>
+                <div class="building-option" data-building="apartment">
+                    <strong>아파트</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">15층, 주거</div>
+                </div>
+                <div class="building-option" data-building="mall">
+                    <strong>쇼핑몰</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">5층, 상업시설</div>
+                </div>
+                <div class="building-option" data-building="hospital">
+                    <strong>병원</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">8층, 의료시설</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">🏢 층별 보기</div>
+                <div id="floorList" class="floor-list"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">🎨 표시 옵션</div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showWalls" checked>
+                    <label for="showWalls">벽 표시</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showFloors" checked>
+                    <label for="showFloors">바닥 표시</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showStructure" checked>
+                    <label for="showStructure">기둥/구조 표시</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showRooms" checked>
+                    <label for="showRooms">방 색상 구분</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showLabels" checked>
+                    <label for="showLabels">라벨 표시</label>
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>투명도</span>
+                        <span id="opacityValue">100%</span>
+                    </div>
+                    <input type="range" id="opacity" min="10" max="100" value="100">
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">📏 카메라 제어</div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>줌</span>
+                        <span id="zoomValue">0.7x</span>
+                    </div>
+                    <input type="range" id="zoom" min="20" max="200" value="70">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" id="resetCamera">카메라 리셋</button>
+                    <button class="btn" id="topView">평면도</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">ℹ️ 범례</div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #3498db;"></span>
+                        <span>사무실/거실</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #e74c3c;"></span>
+                        <span>회의실/침실</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #f39c12;"></span>
+                        <span>복도</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #2ecc71;"></span>
+                        <span>화장실</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #9b59b6;"></span>
+                        <span>엘리베이터</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-indicator" style="background: #95a5a6;"></span>
+                        <span>계단</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">📊 건물 정보</div>
+                <div class="info-display" id="buildingInfo">
+                    <div>총 층수: <strong id="totalFloors">10</strong>층</div>
+                    <div>총 면적: <strong id="totalArea">5,000</strong>m²</div>
+                    <div>건물 높이: <strong id="buildingHeight">40</strong>m</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 3D Math utilities
+        class Vector3 {
+            constructor(x = 0, y = 0, z = 0) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+
+            rotate(rx, ry) {
+                // Rotate around Y axis
+                let x = this.x * Math.cos(ry) - this.z * Math.sin(ry);
+                let z = this.x * Math.sin(ry) + this.z * Math.cos(ry);
+                this.x = x;
+                this.z = z;
+
+                // Rotate around X axis
+                let y = this.y * Math.cos(rx) - this.z * Math.sin(rx);
+                z = this.y * Math.sin(rx) + this.z * Math.cos(rx);
+                this.y = y;
+                this.z = z;
+
+                return this;
+            }
+
+            project(camera) {
+                const scale = camera.fov / (camera.fov + this.z);
+                return {
+                    x: this.x * scale * camera.zoom + canvas.width / 2,
+                    y: -this.y * scale * camera.zoom + canvas.height / 2,
+                    scale: scale
+                };
+            }
+        }
+
+        // Camera
+        const camera = {
+            x: 0,
+            y: 0,
+            z: -500,
+            rotX: -0.4,
+            rotY: 0.6,
+            fov: 800,
+            zoom: 0.7
+        };
+
+        // Building data
+        const buildings = {
+            office: {
+                name: '오피스 빌딩',
+                floors: 10,
+                floorHeight: 8,
+                width: 80,
+                depth: 60,
+                area: 4800,
+                layout: [
+                    // Row 1
+                    { x: 0, z: 0, w: 15, d: 15, color: '#3498db', name: '사무실 A' },
+                    { x: 1, z: 0, w: 15, d: 15, color: '#3498db', name: '사무실 B' },
+                    { x: 2, z: 0, w: 15, d: 15, color: '#e74c3c', name: '회의실 1' },
+                    { x: 3, z: 0, w: 15, d: 15, color: '#3498db', name: '사무실 C' },
+                    { x: 4, z: 0, w: 15, d: 15, color: '#3498db', name: '사무실 D' },
+                    // Row 2 (복도)
+                    { x: 0, z: 1, w: 15, d: 12, color: '#f39c12', name: '복도' },
+                    { x: 1, z: 1, w: 15, d: 12, color: '#9b59b6', name: '엘리베이터' },
+                    { x: 2, z: 1, w: 15, d: 12, color: '#f39c12', name: '복도' },
+                    { x: 3, z: 1, w: 15, d: 12, color: '#95a5a6', name: '계단' },
+                    { x: 4, z: 1, w: 15, d: 12, color: '#f39c12', name: '복도' },
+                    // Row 3
+                    { x: 0, z: 2, w: 15, d: 18, color: '#3498db', name: '사무실 E' },
+                    { x: 1, z: 2, w: 15, d: 18, color: '#3498db', name: '사무실 F' },
+                    { x: 2, z: 2, w: 15, d: 18, color: '#e74c3c', name: '회의실 2' },
+                    { x: 3, z: 2, w: 15, d: 18, color: '#2ecc71', name: '화장실' },
+                    { x: 4, z: 2, w: 15, d: 18, color: '#3498db', name: '사무실 G' }
+                ]
+            },
+            apartment: {
+                name: '아파트',
+                floors: 15,
+                floorHeight: 6,
+                width: 100,
+                depth: 50,
+                area: 5000,
+                layout: [
+                    // 4가구
+                    { x: 0, z: 0, w: 22, d: 23, color: '#3498db', name: '101호 거실' },
+                    { x: 0, z: 1, w: 11, d: 22, color: '#e74c3c', name: '101호 침실1' },
+                    { x: 1, z: 1, w: 11, d: 22, color: '#e74c3c', name: '101호 침실2' },
+
+                    { x: 2, z: 0, w: 22, d: 23, color: '#3498db', name: '102호 거실' },
+                    { x: 2, z: 1, w: 11, d: 22, color: '#e74c3c', name: '102호 침실1' },
+                    { x: 3, z: 1, w: 11, d: 22, color: '#2ecc71', name: '102호 욕실' },
+
+                    // 중앙 복도/엘베
+                    { x: 4, z: 0, w: 10, d: 23, color: '#9b59b6', name: '엘리베이터' },
+                    { x: 4, z: 1, w: 10, d: 22, color: '#f39c12', name: '복도' },
+
+                    { x: 5, z: 0, w: 22, d: 23, color: '#3498db', name: '103호 거실' },
+                    { x: 5, z: 1, w: 11, d: 22, color: '#e74c3c', name: '103호 침실1' },
+                    { x: 6, z: 1, w: 11, d: 22, color: '#e74c3c', name: '103호 침실2' },
+
+                    { x: 7, z: 0, w: 22, d: 23, color: '#3498db', name: '104호 거실' },
+                    { x: 7, z: 1, w: 11, d: 22, color: '#e74c3c', name: '104호 침실1' },
+                    { x: 8, z: 1, w: 11, d: 22, color: '#2ecc71', name: '104호 욕실' }
+                ]
+            },
+            mall: {
+                name: '쇼핑몰',
+                floors: 5,
+                floorHeight: 10,
+                width: 120,
+                depth: 120,
+                area: 14400,
+                layout: [
+                    // 대형 매장들
+                    { x: 0, z: 0, w: 35, d: 35, color: '#3498db', name: '백화점' },
+                    { x: 1, z: 0, w: 35, d: 35, color: '#3498db', name: '대형마트' },
+                    { x: 2, z: 0, w: 35, d: 35, color: '#e74c3c', name: '푸드코트' },
+
+                    { x: 0, z: 1, w: 35, d: 40, color: '#f39c12', name: '중앙 통로' },
+                    { x: 1, z: 1, w: 35, d: 40, color: '#9b59b6', name: '에스컬레이터' },
+                    { x: 2, z: 1, w: 35, d: 40, color: '#f39c12', name: '중앙 통로' },
+
+                    { x: 0, z: 2, w: 35, d: 35, color: '#3498db', name: '영화관' },
+                    { x: 1, z: 2, w: 35, d: 35, color: '#2ecc71', name: '화장실' },
+                    { x: 2, z: 2, w: 35, d: 35, color: '#3498db', name: '게임센터' }
+                ]
+            },
+            hospital: {
+                name: '병원',
+                floors: 8,
+                floorHeight: 8,
+                width: 90,
+                depth: 70,
+                area: 6300,
+                layout: [
+                    // 병원 레이아웃
+                    { x: 0, z: 0, w: 18, d: 20, color: '#3498db', name: '병실 1' },
+                    { x: 1, z: 0, w: 18, d: 20, color: '#3498db', name: '병실 2' },
+                    { x: 2, z: 0, w: 18, d: 20, color: '#3498db', name: '병실 3' },
+                    { x: 3, z: 0, w: 18, d: 20, color: '#3498db', name: '병실 4' },
+                    { x: 4, z: 0, w: 18, d: 20, color: '#3498db', name: '병실 5' },
+
+                    { x: 0, z: 1, w: 18, d: 15, color: '#f39c12', name: '복도' },
+                    { x: 1, z: 1, w: 18, d: 15, color: '#9b59b6', name: '엘리베이터' },
+                    { x: 2, z: 1, w: 18, d: 15, color: '#f39c12', name: '복도' },
+                    { x: 3, z: 1, w: 18, d: 15, color: '#2ecc71', name: '화장실' },
+                    { x: 4, z: 1, w: 18, d: 15, color: '#95a5a6', name: '계단' },
+
+                    { x: 0, z: 2, w: 18, d: 25, color: '#e74c3c', name: '수술실 1' },
+                    { x: 1, z: 2, w: 18, d: 25, color: '#e74c3c', name: '수술실 2' },
+                    { x: 2, z: 2, w: 18, d: 25, color: '#3498db', name: '진료실' },
+                    { x: 3, z: 2, w: 18, d: 25, color: '#3498db', name: '병실 6' },
+                    { x: 4, z: 2, w: 18, d: 25, color: '#3498db', name: '병실 7' }
+                ]
+            }
+        };
+
+        // State
+        let currentBuilding = 'office';
+        let viewMode = 'perspective';
+        let visibleFloors = [];
+        let showWalls = true;
+        let showFloors = true;
+        let showStructure = true;
+        let showRooms = true;
+        let showLabels = true;
+        let opacity = 1;
+
+        // Mouse interaction
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+
+                camera.rotY += dx * 0.005;
+                camera.rotX += dy * 0.005;
+
+                // Clamp rotation
+                camera.rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotX));
+
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            camera.zoom *= (1 - e.deltaY * 0.001);
+            camera.zoom = Math.max(0.2, Math.min(3, camera.zoom));
+            document.getElementById('zoom').value = camera.zoom * 100;
+            document.getElementById('zoomValue').textContent = camera.zoom.toFixed(1) + 'x';
+        });
+
+        // Initialize floors
+        function initFloors() {
+            const building = buildings[currentBuilding];
+            visibleFloors = Array(building.floors).fill(true);
+            updateFloorList();
+            updateBuildingInfo();
+        }
+
+        function updateFloorList() {
+            const building = buildings[currentBuilding];
+            const list = document.getElementById('floorList');
+            list.innerHTML = '';
+
+            for (let i = building.floors - 1; i >= 0; i--) {
+                const item = document.createElement('div');
+                item.className = 'floor-item' + (visibleFloors[i] ? '' : ' hidden');
+                item.innerHTML = `
+                    <span>${i + 1}층</span>
+                    <div class="toggle-switch ${visibleFloors[i] ? 'active' : ''}" data-floor="${i}"></div>
+                `;
+                list.appendChild(item);
+
+                item.querySelector('.toggle-switch').addEventListener('click', () => {
+                    visibleFloors[i] = !visibleFloors[i];
+                    updateFloorList();
+                });
+            }
+        }
+
+        function updateBuildingInfo() {
+            const building = buildings[currentBuilding];
+            document.getElementById('totalFloors').textContent = building.floors;
+            document.getElementById('totalArea').textContent = (building.area * building.floors).toLocaleString();
+            document.getElementById('buildingHeight').textContent = building.floors * building.floorHeight;
+        }
+
+        // Draw building
+        function drawBuilding() {
+            const building = buildings[currentBuilding];
+            const hw = building.width / 2;
+            const hd = building.depth / 2;
+
+            for (let floor = 0; floor < building.floors; floor++) {
+                if (!visibleFloors[floor]) continue;
+
+                const y = floor * building.floorHeight;
+
+                // Draw floor
+                if (showFloors) {
+                    drawFloor(hw, hd, y, floor);
+                }
+
+                // Draw walls
+                if (showWalls) {
+                    drawWalls(hw, hd, y, building.floorHeight, floor);
+                }
+
+                // Draw structure (columns)
+                if (showStructure) {
+                    drawColumns(hw, hd, y, building.floorHeight);
+                }
+
+                // Draw rooms
+                if (showRooms) {
+                    drawRooms(hw, hd, y, building.floorHeight, floor);
+                }
+            }
+        }
+
+        function drawFloor(hw, hd, y, floorNum) {
+            const corners = [
+                new Vector3(-hw, y, -hd),
+                new Vector3(hw, y, -hd),
+                new Vector3(hw, y, hd),
+                new Vector3(-hw, y, hd)
+            ];
+
+            drawQuad(corners, '#34495e', 0.3);
+        }
+
+        function drawWalls(hw, hd, y, h, floorNum) {
+            const wallColor = viewMode === 'xray' ? '#3498db' : '#7f8c8d';
+            const wallAlpha = viewMode === 'xray' ? 0.2 : 0.6;
+
+            // Front wall
+            drawQuad([
+                new Vector3(-hw, y, hd),
+                new Vector3(hw, y, hd),
+                new Vector3(hw, y + h, hd),
+                new Vector3(-hw, y + h, hd)
+            ], wallColor, wallAlpha);
+
+            // Back wall
+            drawQuad([
+                new Vector3(-hw, y, -hd),
+                new Vector3(hw, y, -hd),
+                new Vector3(hw, y + h, -hd),
+                new Vector3(-hw, y + h, -hd)
+            ], wallColor, wallAlpha);
+
+            // Left wall
+            drawQuad([
+                new Vector3(-hw, y, -hd),
+                new Vector3(-hw, y, hd),
+                new Vector3(-hw, y + h, hd),
+                new Vector3(-hw, y + h, -hd)
+            ], wallColor, wallAlpha);
+
+            // Right wall
+            drawQuad([
+                new Vector3(hw, y, -hd),
+                new Vector3(hw, y, hd),
+                new Vector3(hw, y + h, hd),
+                new Vector3(hw, y + h, -hd)
+            ], wallColor, wallAlpha);
+        }
+
+        function drawColumns(hw, hd, y, h) {
+            const building = buildings[currentBuilding];
+            const colSize = Math.max(building.width, building.depth) * 0.02; // Scale with building size
+            const spacing = building.width / 4;
+
+            const positions = [
+                [-hw + spacing, -hd + spacing], [0, -hd + spacing], [hw - spacing, -hd + spacing],
+                [-hw + spacing, 0], [0, 0], [hw - spacing, 0],
+                [-hw + spacing, hd - spacing], [0, hd - spacing], [hw - spacing, hd - spacing]
+            ];
+
+            positions.forEach(([x, z]) => {
+                drawCube(x, y, z, colSize, h, colSize, '#95a5a6', 0.8);
+            });
+        }
+
+        function drawRooms(hw, hd, y, h, floorNum) {
+            const building = buildings[currentBuilding];
+            const layout = building.layout;
+
+            // Calculate grid dimensions
+            const maxX = Math.max(...layout.map(r => r.x)) + 1;
+            const maxZ = Math.max(...layout.map(r => r.z)) + 1;
+
+            const cellWidth = building.width / maxX;
+            const cellDepth = building.depth / maxZ;
+
+            layout.forEach(room => {
+                const rx = -hw + (room.x + 0.5) * cellWidth;
+                const rz = -hd + (room.z + 0.5) * cellDepth;
+                const rw = (room.w / building.width) * building.width;
+                const rd = (room.d / building.depth) * building.depth;
+
+                drawCube(rx, y + 0.1, rz, rw * 0.95, 0.3, rd * 0.95, room.color, 0.7);
+
+                if (showLabels) {
+                    drawLabel(rx, y + h / 2, rz, room.name);
+                }
+            });
+        }
+
+        function drawCube(cx, cy, cz, w, h, d, color, alpha) {
+            const hw = w / 2;
+            const hh = h / 2;
+            const hd = d / 2;
+
+            // Front
+            drawQuad([
+                new Vector3(cx - hw, cy - hh, cz + hd),
+                new Vector3(cx + hw, cy - hh, cz + hd),
+                new Vector3(cx + hw, cy + hh, cz + hd),
+                new Vector3(cx - hw, cy + hh, cz + hd)
+            ], color, alpha);
+
+            // Top
+            drawQuad([
+                new Vector3(cx - hw, cy + hh, cz - hd),
+                new Vector3(cx + hw, cy + hh, cz - hd),
+                new Vector3(cx + hw, cy + hh, cz + hd),
+                new Vector3(cx - hw, cy + hh, cz + hd)
+            ], color, alpha * 0.8);
+
+            // Right
+            drawQuad([
+                new Vector3(cx + hw, cy - hh, cz - hd),
+                new Vector3(cx + hw, cy - hh, cz + hd),
+                new Vector3(cx + hw, cy + hh, cz + hd),
+                new Vector3(cx + hw, cy + hh, cz - hd)
+            ], color, alpha * 0.6);
+        }
+
+        function drawQuad(vertices, color, alpha) {
+            // Transform vertices
+            const transformed = vertices.map(v => {
+                const tv = new Vector3(v.x, v.y, v.z);
+                tv.rotate(camera.rotX, camera.rotY);
+                return tv;
+            });
+
+            // Calculate average Z for depth sorting
+            const avgZ = transformed.reduce((sum, v) => sum + v.z, 0) / transformed.length;
+
+            // Skip if behind camera
+            if (avgZ > 0) return;
+
+            // Project to 2D
+            const projected = transformed.map(v => v.project(camera));
+
+            // Draw
+            ctx.globalAlpha = alpha * opacity;
+            ctx.fillStyle = color;
+            ctx.strokeStyle = viewMode === 'wireframe' ? '#00ffff' : color;
+            ctx.lineWidth = viewMode === 'wireframe' ? 2 : 1;
+
+            ctx.beginPath();
+            ctx.moveTo(projected[0].x, projected[0].y);
+            for (let i = 1; i < projected.length; i++) {
+                ctx.lineTo(projected[i].x, projected[i].y);
+            }
+            ctx.closePath();
+
+            if (viewMode !== 'wireframe') {
+                ctx.fill();
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        function drawLabel(x, y, z, text) {
+            const v = new Vector3(x, y, z);
+            v.rotate(camera.rotX, camera.rotY);
+
+            if (v.z > 0) return;
+
+            const proj = v.project(camera);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, proj.x, proj.y);
+        }
+
+        // Render loop
+        function render() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            for (let i = -50; i <= 50; i += 10) {
+                const v1 = new Vector3(i, 0, -50);
+                const v2 = new Vector3(i, 0, 50);
+                v1.rotate(camera.rotX, camera.rotY);
+                v2.rotate(camera.rotX, camera.rotY);
+                const p1 = v1.project(camera);
+                const p2 = v2.project(camera);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+
+                const v3 = new Vector3(-50, 0, i);
+                const v4 = new Vector3(50, 0, i);
+                v3.rotate(camera.rotX, camera.rotY);
+                v4.rotate(camera.rotX, camera.rotY);
+                const p3 = v3.project(camera);
+                const p4 = v4.project(camera);
+                ctx.beginPath();
+                ctx.moveTo(p3.x, p3.y);
+                ctx.lineTo(p4.x, p4.y);
+                ctx.stroke();
+            }
+
+            drawBuilding();
+
+            // Update info
+            document.getElementById('cameraPos').textContent =
+                `X:${camera.x.toFixed(0)} Y:${camera.y.toFixed(0)} Z:${camera.z.toFixed(0)}`;
+            document.getElementById('rotation').textContent =
+                `RX:${(camera.rotX * 180 / Math.PI).toFixed(0)}° RY:${(camera.rotY * 180 / Math.PI).toFixed(0)}°`;
+
+            requestAnimationFrame(render);
+        }
+
+        // UI Event listeners
+        document.querySelectorAll('.building-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.building-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentBuilding = btn.dataset.building;
+                initFloors();
+            });
+        });
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                viewMode = btn.dataset.mode;
+            });
+        });
+
+        document.getElementById('showWalls').addEventListener('change', (e) => {
+            showWalls = e.target.checked;
+        });
+
+        document.getElementById('showFloors').addEventListener('change', (e) => {
+            showFloors = e.target.checked;
+        });
+
+        document.getElementById('showStructure').addEventListener('change', (e) => {
+            showStructure = e.target.checked;
+        });
+
+        document.getElementById('showRooms').addEventListener('change', (e) => {
+            showRooms = e.target.checked;
+        });
+
+        document.getElementById('showLabels').addEventListener('change', (e) => {
+            showLabels = e.target.checked;
+        });
+
+        document.getElementById('opacity').addEventListener('input', (e) => {
+            opacity = e.target.value / 100;
+            document.getElementById('opacityValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('zoom').addEventListener('input', (e) => {
+            camera.zoom = e.target.value / 100;
+            document.getElementById('zoomValue').textContent = (e.target.value / 100).toFixed(1) + 'x';
+        });
+
+        document.getElementById('resetCamera').addEventListener('click', () => {
+            camera.rotX = -0.4;
+            camera.rotY = 0.6;
+            camera.zoom = 0.7;
+            document.getElementById('zoom').value = 70;
+            document.getElementById('zoomValue').textContent = '0.7x';
+        });
+
+        document.getElementById('topView').addEventListener('click', () => {
+            camera.rotX = -Math.PI / 2 + 0.01; // Slightly offset to prevent rendering issues
+            camera.rotY = 0;
+            camera.zoom = 0.5;
+            document.getElementById('zoom').value = 50;
+            document.getElementById('zoomValue').textContent = '0.5x';
+        });
+
+        // Initialize
+        initFloors();
+        render();
+    </script>
+</body>
+</html>

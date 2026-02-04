@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포켓몬 볼 게임 ⚾</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        #gameCanvas {
+            background: linear-gradient(180deg, #87ceeb 0%, #90ee90 100%);
+            border: 5px solid #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: block;
+            margin: 0 auto;
+            cursor: none;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1.5rem;
+            gap: 1rem;
+        }
+
+        .info-box {
+            background: rgba(255,255,255,0.9);
+            padding: 1rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            min-width: 150px;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .info-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .controls {
+            color: white;
+            margin-top: 1rem;
+            font-size: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #gameOverScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 4rem;
+            border-radius: 30px;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transition: transform 0.3s;
+        }
+
+        #gameOverScreen.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #gameOverScreen h2 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        #gameOverScreen p {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin: 1rem 0;
+        }
+
+        #restartBtn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.3rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        #restartBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .pokemon-selector {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .pokemon-btn {
+            background: white;
+            border: 3px solid transparent;
+            padding: 1rem;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 2rem;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .pokemon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .pokemon-btn.selected {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 20px rgba(255,107,107,0.5);
+        }
+
+        .clouds {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            color: rgba(255,255,255,0.7);
+            font-size: 3rem;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(calc(100vw + 100px)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="clouds" id="clouds"></div>
+
+    <div class="game-container">
+        <h1>⚾ 포켓볼 챌린지! 🎮</h1>
+
+        <div class="pokemon-selector">
+            <button class="pokemon-btn selected" data-pokemon="pikachu">⚡</button>
+            <button class="pokemon-btn" data-pokemon="charmander">🔥</button>
+            <button class="pokemon-btn" data-pokemon="squirtle">💧</button>
+            <button class="pokemon-btn" data-pokemon="bulbasaur">🌿</button>
+        </div>
+
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+
+        <div class="game-info">
+            <div class="info-box">
+                <div class="info-label">연속 튕김</div>
+                <div class="info-value" id="bounces">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">최고 기록</div>
+                <div class="info-value" id="bestScore">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">총 점수</div>
+                <div class="info-value" id="totalScore">0</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            🖱️ 마우스로 포켓몬 이동 | 볼을 떨어뜨리지 마세요!
+        </div>
+    </div>
+
+    <div id="gameOverScreen">
+        <h2>게임 오버! 😢</h2>
+        <p>연속 튕김 횟수</p>
+        <div class="score-display" id="finalBounces">0</div>
+        <p>총 점수: <span id="finalTotalScore">0</span></p>
+        <button id="restartBtn">다시 도전! 🚀</button>
+    </div>
+
+    <script>
+        // Create floating clouds
+        const cloudsContainer = document.getElementById('clouds');
+        for (let i = 0; i < 5; i++) {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            cloud.textContent = '☁️';
+            cloud.style.top = Math.random() * 50 + '%';
+            cloud.style.animationDelay = Math.random() * 10 + 's';
+            cloud.style.animationDuration = (15 + Math.random() * 10) + 's';
+            cloudsContainer.appendChild(cloud);
+        }
+
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let gameRunning = true;
+        let bounces = 0;
+        let totalScore = 0;
+        let bestScore = parseInt(localStorage.getItem('pokemonBallBest') || '0');
+        let combo = 0;
+        let lastHitTime = 0;
+
+        document.getElementById('bestScore').textContent = bestScore;
+
+        // Pokemon selection
+        let selectedPokemon = 'pikachu';
+        const pokemonEmojis = {
+            pikachu: '⚡',
+            charmander: '🔥',
+            squirtle: '💧',
+            bulbasaur: '🌿'
+        };
+
+        document.querySelectorAll('.pokemon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pokemon-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedPokemon = btn.dataset.pokemon;
+            });
+        });
+
+        // Player (Pokemon)
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 80,
+            width: 80,
+            height: 80,
+            speed: 15
+        };
+
+        // Ball (Pokeball)
+        const ball = {
+            x: canvas.width / 2,
+            y: 100,
+            radius: 20,
+            vx: 3,
+            vy: 0,
+            gravity: 0.5,
+            bounceMultiplier: 0.85,
+            maxSpeed: 15
+        };
+
+        // Mouse position
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        // Particles
+        let particles = [];
+
+        function createParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 40,
+                    size: Math.random() * 5 + 3,
+                    color: color
+                });
+            }
+        }
+
+        // Draw Pokemon
+        function drawPokemon() {
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(player.x, player.y + player.height, player.width / 2, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pokemon body (circle)
+            ctx.fillStyle = getPlayerColor();
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pokemon emoji
+            ctx.font = '50px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pokemonEmojis[selectedPokemon], player.x, player.y);
+
+            // Eyes
+            const eyeOffset = 15;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(player.x - eyeOffset, player.y - 10, 8, 0, Math.PI * 2);
+            ctx.arc(player.x + eyeOffset, player.y - 10, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(player.x - eyeOffset + 2, player.y - 10, 4, 0, Math.PI * 2);
+            ctx.arc(player.x + eyeOffset + 2, player.y - 10, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Happy mouth when bouncing
+            if (Date.now() - lastHitTime < 200) {
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y + 5, 15, 0, Math.PI);
+                ctx.stroke();
+            }
+        }
+
+        function getPlayerColor() {
+            const colors = {
+                pikachu: '#FFD700',
+                charmander: '#FF6347',
+                squirtle: '#4682B4',
+                bulbasaur: '#90EE90'
+            };
+            return colors[selectedPokemon];
+        }
+
+        // Draw Pokeball
+        function drawPokeball() {
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(ball.x, canvas.height - 10, ball.radius, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outer glow
+            const gradient = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, ball.radius * 1.5);
+            gradient.addColorStop(0, 'rgba(255,255,255,0.3)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Top half (red)
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI, true);
+            ctx.fill();
+
+            // Bottom half (white)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI, false);
+            ctx.fill();
+
+            // Middle black line
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(ball.x - ball.radius, ball.y);
+            ctx.lineTo(ball.x + ball.radius, ball.y);
+            ctx.stroke();
+
+            // Center circle (white)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Center circle (black border)
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 0.4, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner circle
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Update player position
+        function updatePlayer() {
+            const dx = mouseX - player.x;
+            const dy = mouseY - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+                const moveX = (dx / distance) * player.speed;
+                const moveY = (dy / distance) * player.speed;
+                player.x += moveX;
+                player.y += moveY;
+            }
+
+            // Keep player in bounds
+            player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
+            player.y = Math.max(player.height / 2, Math.min(canvas.height - player.height / 2, player.y));
+        }
+
+        // Update ball physics
+        function updateBall() {
+            ball.vy += ball.gravity;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Bounce off walls
+            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                ball.vx *= -1;
+                ball.x = ball.x < canvas.width / 2 ? ball.radius : canvas.width - ball.radius;
+                createParticles(ball.x, ball.y, '#ffffff', 5);
+            }
+
+            // Bounce off ceiling
+            if (ball.y - ball.radius < 0) {
+                ball.vy *= -ball.bounceMultiplier;
+                ball.y = ball.radius;
+                createParticles(ball.x, ball.y, '#ffffff', 5);
+            }
+
+            // Check collision with player
+            const dx = ball.x - player.x;
+            const dy = ball.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < ball.radius + player.width / 2) {
+                // Calculate bounce angle based on where ball hits
+                const angle = Math.atan2(dy, dx);
+                const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) * 1.1;
+
+                ball.vx = Math.cos(angle) * speed;
+                ball.vy = Math.sin(angle) * speed - 8; // Add upward boost
+
+                // Limit max speed
+                const currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+                if (currentSpeed > ball.maxSpeed) {
+                    ball.vx = (ball.vx / currentSpeed) * ball.maxSpeed;
+                    ball.vy = (ball.vy / currentSpeed) * ball.maxSpeed;
+                }
+
+                // Move ball outside player to prevent sticking
+                ball.x = player.x + Math.cos(angle) * (player.width / 2 + ball.radius);
+                ball.y = player.y + Math.sin(angle) * (player.width / 2 + ball.radius);
+
+                // Update score
+                bounces++;
+                combo++;
+                totalScore += combo;
+                lastHitTime = Date.now();
+
+                document.getElementById('bounces').textContent = bounces;
+                document.getElementById('totalScore').textContent = totalScore;
+
+                // Create particles
+                createParticles(ball.x, ball.y, getPlayerColor(), 20);
+            }
+
+            // Check if ball fell
+            if (ball.y - ball.radius > canvas.height) {
+                gameOver();
+            }
+        }
+
+        // Update and draw particles
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // gravity
+                p.life--;
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                return p.life > 0;
+            });
+        }
+
+        // Draw combo text
+        function drawCombo() {
+            if (combo > 1 && Date.now() - lastHitTime < 1000) {
+                ctx.font = 'bold 40px Arial';
+                ctx.fillStyle = '#ff6b6b';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(`COMBO x${combo}!`, canvas.width / 2, 80);
+                ctx.fillText(`COMBO x${combo}!`, canvas.width / 2, 80);
+            }
+
+            // Reset combo if too much time passed
+            if (Date.now() - lastHitTime > 2000) {
+                combo = 0;
+            }
+        }
+
+        // Draw grass at bottom
+        function drawGrass() {
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+
+            // Grass details
+            ctx.strokeStyle = '#1a6b1a';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - 30);
+                ctx.lineTo(i + 5, canvas.height - 40);
+                ctx.lineTo(i + 10, canvas.height - 30);
+                ctx.stroke();
+            }
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+
+            if (bounces > bestScore) {
+                bestScore = bounces;
+                localStorage.setItem('pokemonBallBest', bestScore);
+                document.getElementById('bestScore').textContent = bestScore;
+            }
+
+            document.getElementById('finalBounces').textContent = bounces;
+            document.getElementById('finalTotalScore').textContent = totalScore;
+            document.getElementById('gameOverScreen').classList.add('show');
+        }
+
+        // Restart game
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            gameRunning = true;
+            bounces = 0;
+            combo = 0;
+            totalScore = 0;
+
+            ball.x = canvas.width / 2;
+            ball.y = 100;
+            ball.vx = 3;
+            ball.vy = 0;
+
+            document.getElementById('bounces').textContent = bounces;
+            document.getElementById('totalScore').textContent = totalScore;
+            document.getElementById('gameOverScreen').classList.remove('show');
+        });
+
+        // Game loop
+        function gameLoop() {
+            // Clear canvas with gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87ceeb');
+            gradient.addColorStop(1, '#90ee90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawGrass();
+
+            if (gameRunning) {
+                updatePlayer();
+                updateBall();
+            }
+
+            drawPokemon();
+            drawPokeball();
+            updateParticles();
+            drawCombo();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>

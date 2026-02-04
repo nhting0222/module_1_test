@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파티클 유니버스 - 입자 샌드박스 🌌</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        #canvas {
+            border: 3px solid #333;
+            background: #000;
+            cursor: crosshair;
+            box-shadow: 0 0 50px rgba(0,255,255,0.3);
+        }
+
+        .sidebar {
+            background: rgba(20,20,20,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            width: 250px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #0ff;
+            border-bottom: 2px solid #0ff;
+            padding-bottom: 5px;
+        }
+
+        .particle-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: 2px solid #333;
+            background: #1a1a1a;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .particle-btn:hover {
+            transform: translateX(5px);
+            border-color: #0ff;
+            box-shadow: 0 0 15px rgba(0,255,255,0.5);
+        }
+
+        .particle-btn.active {
+            background: linear-gradient(135deg, #0ff 0%, #00a 100%);
+            border-color: #0ff;
+            font-weight: bold;
+        }
+
+        .particle-icon {
+            font-size: 1.5rem;
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #333;
+            background: #2a2a2a;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .control-btn:hover {
+            background: #3a3a3a;
+            transform: scale(1.05);
+        }
+
+        .control-btn.danger {
+            background: #c0392b;
+            border-color: #e74c3c;
+        }
+
+        .control-btn.danger:hover {
+            background: #e74c3c;
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-label {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #0ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #0ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff;
+            border: none;
+        }
+
+        .stats {
+            background: rgba(0,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas" width="1000" height="700"></canvas>
+
+        <div class="sidebar">
+            <h1>🌌 파티클 유니버스</h1>
+
+            <div class="section">
+                <div class="section-title">입자 종류</div>
+                <button class="particle-btn active" data-type="sand">
+                    <span class="particle-icon">🟡</span>
+                    <span>모래 (Sand)</span>
+                </button>
+                <button class="particle-btn" data-type="water">
+                    <span class="particle-icon">💧</span>
+                    <span>물 (Water)</span>
+                </button>
+                <button class="particle-btn" data-type="fire">
+                    <span class="particle-icon">🔥</span>
+                    <span>불 (Fire)</span>
+                </button>
+                <button class="particle-btn" data-type="wood">
+                    <span class="particle-icon">🟫</span>
+                    <span>나무 (Wood)</span>
+                </button>
+                <button class="particle-btn" data-type="stone">
+                    <span class="particle-icon">⬛</span>
+                    <span>돌 (Stone)</span>
+                </button>
+                <button class="particle-btn" data-type="acid">
+                    <span class="particle-icon">🟢</span>
+                    <span>산성 (Acid)</span>
+                </button>
+                <button class="particle-btn" data-type="oil">
+                    <span class="particle-icon">🟤</span>
+                    <span>기름 (Oil)</span>
+                </button>
+                <button class="particle-btn" data-type="gas">
+                    <span class="particle-icon">💨</span>
+                    <span>가스 (Gas)</span>
+                </button>
+                <button class="particle-btn" data-type="ice">
+                    <span class="particle-icon">🧊</span>
+                    <span>얼음 (Ice)</span>
+                </button>
+                <button class="particle-btn" data-type="lava">
+                    <span class="particle-icon">🌋</span>
+                    <span>용암 (Lava)</span>
+                </button>
+                <button class="particle-btn" data-type="plant">
+                    <span class="particle-icon">🌿</span>
+                    <span>식물 (Plant)</span>
+                </button>
+                <button class="particle-btn" data-type="electric">
+                    <span class="particle-icon">⚡</span>
+                    <span>전기 (Electric)</span>
+                </button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">도구</div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>브러시 크기</span>
+                        <span id="brushSize">5</span>
+                    </div>
+                    <input type="range" id="brushSizeSlider" min="1" max="20" value="5">
+                </div>
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="gravityToggle" checked>
+                    <label for="gravityToggle">중력 활성화</label>
+                </div>
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="collisionToggle" checked>
+                    <label for="collisionToggle">충돌 감지</label>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">컨트롤</div>
+                <button class="control-btn" id="pauseBtn">⏸️ 일시정지</button>
+                <button class="control-btn danger" id="clearBtn">🗑️ 모두 지우기</button>
+                <button class="control-btn" id="explosionBtn">💥 폭발!</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">통계</div>
+                <div class="stats">
+                    <div>입자 수: <span id="particleCount">0</span></div>
+                    <div>FPS: <span id="fps">60</span></div>
+                    <div>현재 선택: <span id="currentType">모래</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let particles = [];
+        let currentType = 'sand';
+        let brushSize = 5;
+        let isDrawing = false;
+        let isPaused = false;
+        let gravity = true;
+        let collision = true;
+        let mouseX = 0;
+        let mouseY = 0;
+        let lastTime = Date.now();
+        let fps = 60;
+
+        // Particle types with properties
+        const particleTypes = {
+            sand: {
+                color: '#f4a460',
+                gravity: 0.5,
+                friction: 0.95,
+                flammable: false,
+                density: 3,
+                name: '모래'
+            },
+            water: {
+                color: '#4169e1',
+                gravity: 0.3,
+                friction: 0.98,
+                flammable: false,
+                density: 2,
+                spread: true,
+                name: '물'
+            },
+            fire: {
+                color: '#ff4500',
+                gravity: -0.2,
+                friction: 0.9,
+                lifetime: 60,
+                flammable: false,
+                density: 0,
+                name: '불'
+            },
+            wood: {
+                color: '#8b4513',
+                gravity: 0,
+                friction: 1,
+                flammable: true,
+                density: 5,
+                static: true,
+                name: '나무'
+            },
+            stone: {
+                color: '#708090',
+                gravity: 0.8,
+                friction: 0.9,
+                flammable: false,
+                density: 10,
+                name: '돌'
+            },
+            acid: {
+                color: '#00ff00',
+                gravity: 0.4,
+                friction: 0.97,
+                corrosive: true,
+                density: 2,
+                name: '산성'
+            },
+            oil: {
+                color: '#654321',
+                gravity: 0.2,
+                friction: 0.99,
+                flammable: true,
+                density: 1,
+                spread: true,
+                name: '기름'
+            },
+            gas: {
+                color: '#d3d3d3',
+                gravity: -0.3,
+                friction: 0.98,
+                flammable: true,
+                density: 0,
+                spread: true,
+                name: '가스'
+            },
+            ice: {
+                color: '#add8e6',
+                gravity: 0,
+                friction: 1,
+                flammable: false,
+                density: 2,
+                static: true,
+                meltable: true,
+                name: '얼음'
+            },
+            lava: {
+                color: '#ff6347',
+                gravity: 0.1,
+                friction: 0.95,
+                hot: true,
+                density: 4,
+                name: '용암'
+            },
+            plant: {
+                color: '#228b22',
+                gravity: 0,
+                friction: 1,
+                flammable: true,
+                density: 1,
+                static: true,
+                grows: true,
+                name: '식물'
+            },
+            electric: {
+                color: '#ffff00',
+                gravity: 0,
+                friction: 0.8,
+                lifetime: 30,
+                conducts: true,
+                density: 0,
+                name: '전기'
+            }
+        };
+
+        // Particle class
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.type = type;
+                this.properties = particleTypes[type];
+                this.life = this.properties.lifetime || Infinity;
+                this.age = 0;
+            }
+
+            update() {
+                if (this.properties.static) return;
+
+                this.age++;
+
+                // Lifetime check
+                if (this.life !== Infinity && this.age >= this.life) {
+                    return false; // Mark for deletion
+                }
+
+                // Gravity
+                if (gravity && this.properties.gravity !== 0) {
+                    this.vy += this.properties.gravity;
+                }
+
+                // Friction
+                this.vx *= this.properties.friction;
+                this.vy *= this.properties.friction;
+
+                // Movement
+                const newX = Math.round(this.x + this.vx);
+                const newY = Math.round(this.y + this.vy);
+
+                // Boundary check
+                if (newX < 0 || newX >= canvas.width || newY < 0 || newY >= canvas.height) {
+                    return false;
+                }
+
+                // Collision detection
+                if (collision) {
+                    const particleAt = getParticleAt(newX, newY);
+
+                    if (!particleAt) {
+                        this.x = newX;
+                        this.y = newY;
+                    } else {
+                        // Interaction logic
+                        this.interact(particleAt);
+
+                        // Try to move sideways
+                        if (this.properties.spread) {
+                            const dir = Math.random() < 0.5 ? -1 : 1;
+                            const sideX = Math.round(this.x + dir);
+                            if (sideX >= 0 && sideX < canvas.width && !getParticleAt(sideX, newY)) {
+                                this.x = sideX;
+                                this.y = newY;
+                            }
+                        }
+
+                        this.vx *= -0.5;
+                        this.vy *= -0.5;
+                    }
+                } else {
+                    this.x = newX;
+                    this.y = newY;
+                }
+
+                return true;
+            }
+
+            interact(other) {
+                // Fire + Flammable = Burn
+                if (this.type === 'fire' && other.properties.flammable) {
+                    if (Math.random() < 0.1) {
+                        other.type = 'fire';
+                        other.properties = particleTypes.fire;
+                        other.life = 60;
+                    }
+                }
+
+                // Acid + Most things = Dissolve
+                if (this.type === 'acid' && this.type !== other.type) {
+                    if (Math.random() < 0.05) {
+                        return false; // Dissolve other
+                    }
+                }
+
+                // Lava + Ice = Water
+                if (this.type === 'lava' && other.type === 'ice') {
+                    other.type = 'water';
+                    other.properties = particleTypes.water;
+                    other.properties.static = false;
+                }
+
+                // Fire + Ice = Water
+                if (this.type === 'fire' && other.type === 'ice') {
+                    if (Math.random() < 0.2) {
+                        other.type = 'water';
+                        other.properties = particleTypes.water;
+                        other.properties.static = false;
+                    }
+                }
+
+                // Water + Fire = Steam (Gas)
+                if (this.type === 'water' && other.type === 'fire') {
+                    if (Math.random() < 0.1) {
+                        this.type = 'gas';
+                        this.properties = particleTypes.gas;
+                        this.properties.static = false;
+                    }
+                }
+
+                // Fire + Oil = Bigger Fire
+                if (this.type === 'fire' && other.type === 'oil') {
+                    if (Math.random() < 0.3) {
+                        other.type = 'fire';
+                        other.properties = particleTypes.fire;
+                        other.life = 80;
+                    }
+                }
+
+                // Electric + Water = Spread
+                if (this.type === 'electric' && other.type === 'water') {
+                    if (Math.random() < 0.2) {
+                        other.type = 'electric';
+                        other.properties = particleTypes.electric;
+                        other.life = 20;
+                    }
+                }
+            }
+
+            draw() {
+                // Flickering effect for fire and electric
+                let alpha = 1;
+                if (this.type === 'fire') {
+                    alpha = 0.7 + Math.random() * 0.3;
+                } else if (this.type === 'electric') {
+                    alpha = 0.5 + Math.random() * 0.5;
+                }
+
+                // Age-based fade
+                if (this.life !== Infinity) {
+                    alpha *= 1 - (this.age / this.life);
+                }
+
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.properties.color;
+                ctx.fillRect(this.x, this.y, 2, 2);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Get particle at position
+        function getParticleAt(x, y) {
+            return particles.find(p => Math.round(p.x) === x && Math.round(p.y) === y);
+        }
+
+        // Add particles
+        function addParticles(x, y) {
+            for (let i = 0; i < brushSize; i++) {
+                const offsetX = (Math.random() - 0.5) * brushSize * 2;
+                const offsetY = (Math.random() - 0.5) * brushSize * 2;
+                const px = Math.round(x + offsetX);
+                const py = Math.round(y + offsetY);
+
+                if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+                    if (!getParticleAt(px, py)) {
+                        particles.push(new Particle(px, py, currentType));
+                    }
+                }
+            }
+        }
+
+        // Create explosion
+        function createExplosion() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            for (let i = 0; i < 100; i++) {
+                const angle = (Math.PI * 2 * i) / 100;
+                const speed = 5 + Math.random() * 10;
+                const x = centerX;
+                const y = centerY;
+
+                const p = new Particle(x, y, 'fire');
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                particles.push(p);
+            }
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            addParticles(mouseX, mouseY);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+
+            if (isDrawing) {
+                addParticles(mouseX, mouseY);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+
+        // UI Controls
+        document.querySelectorAll('.particle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.particle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentType = btn.dataset.type;
+                document.getElementById('currentType').textContent = particleTypes[currentType].name;
+            });
+        });
+
+        document.getElementById('brushSizeSlider').addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value);
+            document.getElementById('brushSize').textContent = brushSize;
+        });
+
+        document.getElementById('gravityToggle').addEventListener('change', (e) => {
+            gravity = e.target.checked;
+        });
+
+        document.getElementById('collisionToggle').addEventListener('change', (e) => {
+            collision = e.target.checked;
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').textContent = isPaused ? '▶️ 재생' : '⏸️ 일시정지';
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            particles = [];
+        });
+
+        document.getElementById('explosionBtn').addEventListener('click', () => {
+            createExplosion();
+        });
+
+        // Game loop
+        function update() {
+            if (!isPaused) {
+                particles = particles.filter(p => p.update() !== false);
+
+                // Plant growth
+                if (Math.random() < 0.01) {
+                    particles.forEach(p => {
+                        if (p.type === 'plant' && Math.random() < 0.05) {
+                            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                            const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+                            const nx = p.x + dx;
+                            const ny = p.y + dy;
+                            if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                                if (!getParticleAt(nx, ny)) {
+                                    particles.push(new Particle(nx, ny, 'plant'));
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Update stats
+            document.getElementById('particleCount').textContent = particles.length;
+
+            // Calculate FPS
+            const now = Date.now();
+            const delta = now - lastTime;
+            fps = Math.round(1000 / delta);
+            document.getElementById('fps').textContent = fps;
+            lastTime = now;
+        }
+
+        function draw() {
+            // Clear with fade effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw particles
+            particles.forEach(p => p.draw());
+
+            // Draw cursor
+            if (mouseX && mouseY) {
+                ctx.strokeStyle = '#0ff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, brushSize * 2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start
+        gameLoop();
+    </script>
+</body>
+</html>
